@@ -88,7 +88,7 @@ EXAMPLES = r'''
           prefix: tag
           default_value: "running"
           vars:
-            ansible_group_priority: '{{ *'status' in tags)|ternary(10, 30)}}'
+            ansible_group_priority: '{{ "status" in tags)|ternary(10, 30)}}'
             allowed_ssh_groups: qa,ops
             group_origin: tags
 
