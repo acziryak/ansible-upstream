@@ -4,8 +4,7 @@
 # Copyright: (c) 2016, Toshio Kuratomi <tkuratomi@ansible.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -276,7 +275,7 @@ def main():
     strip = module.params['strip_empty_ends']
     expand_argument_vars = module.params['expand_argument_vars']
 
-    # we promissed these in 'always' ( _lines get autoaded on action plugin)
+    # we promised these in 'always' ( _lines get auto-added on action plugin)
     r = {'changed': False, 'stdout': '', 'stderr': '', 'rc': None, 'cmd': None, 'start': None, 'end': None, 'delta': None, 'msg': ''}
 
     if not shell and executable:

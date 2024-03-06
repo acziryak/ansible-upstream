@@ -4,8 +4,7 @@
 # Copyright: (c) 2017, Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -75,6 +74,7 @@ options:
       - Uses Python regular expressions; see
         U(https://docs.python.org/3/library/re.html).
       - Uses DOTALL, which means the V(.) special character I(can match newlines).
+      - Does not use MULTILINE, so V(^) and V($) will only match the beginning and end of the file.
     type: str
     version_added: "2.4"
   before:
@@ -84,6 +84,7 @@ options:
       - Uses Python regular expressions; see
         U(https://docs.python.org/3/library/re.html).
       - Uses DOTALL, which means the V(.) special character I(can match newlines).
+      - Does not use MULTILINE, so V(^) and V($) will only match the beginning and end of the file.
     type: str
     version_added: "2.4"
   backup:
@@ -125,7 +126,7 @@ EXAMPLES = r'''
     regexp: '^(.+)$'
     replace: '# \1'
 
-- name: Replace before the expression till the begin of the file (requires Ansible >= 2.4)
+- name: Replace before the expression from the beginning of the file (requires Ansible >= 2.4)
   ansible.builtin.replace:
     path: /etc/apache2/sites-available/default.conf
     before: '# live site config'
@@ -134,11 +135,12 @@ EXAMPLES = r'''
 
 # Prior to Ansible 2.7.10, using before and after in combination did the opposite of what was intended.
 # see https://github.com/ansible/ansible/issues/31354 for details.
+# Note (?m) which turns on MULTILINE mode so ^ matches any line's beginning
 - name: Replace between the expressions (requires Ansible >= 2.4)
   ansible.builtin.replace:
     path: /etc/hosts
-    after: '<VirtualHost [*]>'
-    before: '</VirtualHost>'
+    after: '(?m)^<VirtualHost [*]>'
+    before: '(?m)^</VirtualHost>'
     regexp: '^(.+)$'
     replace: '# \1'
 

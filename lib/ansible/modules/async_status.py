@@ -3,8 +3,7 @@
 # Copyright: (c) 2012, Michael DeHaan <michael.dehaan@gmail.com>, and others
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -24,7 +23,7 @@ options:
   mode:
     description:
     - If V(status), obtain the status.
-    - If V(cleanup), clean up the async job cache (by default in C(~/.ansible_async/)) for the specified job O(jid).
+    - If V(cleanup), clean up the async job cache (by default in C(~/.ansible_async/)) for the specified job O(jid), without waiting for it to finish.
     type: str
     choices: [ cleanup, status ]
     default: status
@@ -55,21 +54,26 @@ author:
 
 EXAMPLES = r'''
 ---
-- name: Asynchronous yum task
-  ansible.builtin.yum:
+- name: Asynchronous dnf task
+  ansible.builtin.dnf:
     name: docker-io
     state: present
   async: 1000
   poll: 0
-  register: yum_sleeper
+  register: dnf_sleeper
 
 - name: Wait for asynchronous job to end
   ansible.builtin.async_status:
-    jid: '{{ yum_sleeper.ansible_job_id }}'
+    jid: '{{ dnf_sleeper.ansible_job_id }}'
   register: job_result
   until: job_result.finished
   retries: 100
   delay: 10
+
+- name: Clean up async file
+  ansible.builtin.async_status:
+    jid: '{{ dnf_sleeper.ansible_job_id }}'
+    mode: cleanup
 '''
 
 RETURN = r'''

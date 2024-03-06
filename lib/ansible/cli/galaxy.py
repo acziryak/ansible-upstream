@@ -4,8 +4,7 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 # PYTHON_ARGCOMPLETE_OK
 
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+from __future__ import annotations
 
 # ansible.cli needs to be imported first, to ensure the source bin/* scripts run that code first
 from ansible.cli import CLI
@@ -62,6 +61,7 @@ from ansible.template import Templar
 from ansible.utils.collection_loader import AnsibleCollectionConfig
 from ansible.utils.display import Display
 from ansible.utils.plugin_docs import get_versioned_doclink
+from ansible.utils.vars import load_extra_vars
 
 display = Display()
 urlparse = six.moves.urllib.parse.urlparse
@@ -367,6 +367,7 @@ class GalaxyCLI(CLI):
             init_parser.add_argument('--type', dest='role_type', action='store', default='default',
                                      help="Initialize using an alternate role type. Valid types include: 'container', "
                                           "'apb' and 'network'.")
+        opt_help.add_runtask_options(init_parser)
 
     def add_remove_options(self, parser, parents=None):
         remove_parser = parser.add_parser('remove', parents=parents, help='Delete roles from roles_path.')
@@ -835,7 +836,7 @@ class GalaxyCLI(CLI):
             for role_req in file_requirements:
                 requirements['roles'] += parse_role_req(role_req)
 
-        else:
+        elif isinstance(file_requirements, dict):
             # Newer format with a collections and/or roles key
             extra_keys = set(file_requirements.keys()).difference(set(['roles', 'collections']))
             if extra_keys:
@@ -853,6 +854,9 @@ class GalaxyCLI(CLI):
                 )
                 for collection_req in file_requirements.get('collections') or []
             ]
+
+        else:
+            raise AnsibleError(f"Expecting requirements yaml to be a list or dictionary but got {type(file_requirements).__name__}")
 
         return requirements
 
@@ -1169,6 +1173,7 @@ class GalaxyCLI(CLI):
             )
 
         loader = DataLoader()
+        inject_data.update(load_extra_vars(loader))
         templar = Templar(loader, variables=inject_data)
 
         # create role directory
@@ -1212,7 +1217,11 @@ class GalaxyCLI(CLI):
                     src_template = os.path.join(root, f)
                     dest_file = os.path.join(obj_path, rel_root, filename)
                     template_data = to_text(loader._get_file_contents(src_template)[0], errors='surrogate_or_strict')
-                    b_rendered = to_bytes(templar.template(template_data), errors='surrogate_or_strict')
+                    try:
+                        b_rendered = to_bytes(templar.template(template_data), errors='surrogate_or_strict')
+                    except AnsibleError as e:
+                        shutil.rmtree(b_obj_path)
+                        raise AnsibleError(f"Failed to create {galaxy_type.title()} {obj_name}. Templating {src_template} failed with the error: {e}") from e
                     with open(dest_file, 'wb') as df:
                         df.write(b_rendered)
                 else:
@@ -1265,6 +1274,9 @@ class GalaxyCLI(CLI):
 
                 if remote_data:
                     role_info.update(remote_data)
+                else:
+                    data = u"- the role %s was not found" % role
+                    break
 
             elif context.CLIARGS['offline'] and not gr._exists:
                 data = u"- the role %s was not found" % role
@@ -1786,6 +1798,7 @@ class GalaxyCLI(CLI):
         github_user = to_text(context.CLIARGS['github_user'], errors='surrogate_or_strict')
         github_repo = to_text(context.CLIARGS['github_repo'], errors='surrogate_or_strict')
 
+        rc = 0
         if context.CLIARGS['check_status']:
             task = self.api.get_import_task(github_user=github_user, github_repo=github_repo)
         else:
@@ -1803,7 +1816,7 @@ class GalaxyCLI(CLI):
                     display.display('%s.%s' % (t['summary_fields']['role']['namespace'], t['summary_fields']['role']['name']), color=C.COLOR_CHANGED)
                 display.display(u'\nTo properly namespace this role, remove each of the above and re-import %s/%s from scratch' % (github_user, github_repo),
                                 color=C.COLOR_CHANGED)
-                return 0
+                return rc
             # found a single role as expected
             display.display("Successfully submitted import request %d" % task[0]['id'])
             if not context.CLIARGS['wait']:
@@ -1820,12 +1833,13 @@ class GalaxyCLI(CLI):
                     if msg['id'] not in msg_list:
                         display.display(msg['message_text'], color=colors[msg['message_type']])
                         msg_list.append(msg['id'])
-                if task[0]['state'] in ['SUCCESS', 'FAILED']:
+                if (state := task[0]['state']) in ['SUCCESS', 'FAILED']:
+                    rc = ['SUCCESS', 'FAILED'].index(state)
                     finished = True
                 else:
                     time.sleep(10)
 
-        return 0
+        return rc
 
     def execute_setup(self):
         """ Setup an integration from Github or Travis for Ansible Galaxy roles"""

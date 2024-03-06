@@ -1,6 +1,5 @@
 """A tool for installing test requirements on the controller and target host."""
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+from __future__ import annotations
 
 # pylint: disable=wrong-import-position
 
@@ -249,6 +248,14 @@ def version(pip, options):  # type: (str, t.Dict[str, t.Any]) -> None
 def common_pip_environment():  # type: () -> t.Dict[str, str]
     """Return common environment variables used to run pip."""
     env = os.environ.copy()
+
+    # When ansible-test installs requirements outside a virtual environment, it does so under one of two conditions:
+    # 1) The environment is an ephemeral one provisioned by ansible-test.
+    # 2) The user has provided the `--requirements` option to force installation of requirements.
+    # It seems reasonable to bypass PEP 668 checks in both of these cases.
+    # Doing so with an environment variable allows it to work under any version of pip which supports it, without breaking older versions.
+    # NOTE: pip version 23.0 enforces PEP 668 but does not support the override, in which case upgrading pip is required.
+    env.update(PIP_BREAK_SYSTEM_PACKAGES='1')
 
     return env
 

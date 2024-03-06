@@ -5,8 +5,7 @@
 # Copyright: (c) 2017, Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -127,10 +126,6 @@ options:
     type: bool
     default: no
     version_added: "2.5"
-  others:
-    description:
-      - All arguments accepted by the M(ansible.builtin.file) module also work here.
-    type: str
 extends_documentation_fragment:
     - action_common_attributes
     - action_common_attributes.files

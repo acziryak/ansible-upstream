@@ -3,8 +3,7 @@
 # Copyright: (c) 2012, Stephen Fromm <sfromm@gmail.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -73,8 +72,8 @@ options:
             - Optionally set the user's shell.
             - On macOS, before Ansible 2.5, the default shell for non-system users was V(/usr/bin/false).
               Since Ansible 2.5, the default shell for non-system users on macOS is V(/bin/bash).
-            - See notes for details on how other operating systems determine the default shell by
-              the underlying tool.
+            - On other operating systems, the default shell is determined by the underlying tool
+              invoked by this module. See Notes for a per platform list of invoked tools.
         type: str
     home:
         description:
@@ -223,10 +222,9 @@ options:
     profile:
         description:
             - Sets the profile of the user.
-            - Does nothing when used with other platforms.
             - Can set multiple profiles using comma separation.
             - To delete all the profiles, use O(profile='').
-            - Currently supported on Illumos/Solaris.
+            - Currently supported on Illumos/Solaris. Does nothing when used with other platforms.
         type: str
         version_added: "2.8"
     authorization:
@@ -240,10 +238,9 @@ options:
     role:
         description:
             - Sets the role of the user.
-            - Does nothing when used with other platforms.
             - Can set multiple roles using comma separation.
             - To delete all roles, use O(role='').
-            - Currently supported on Illumos/Solaris.
+            - Currently supported on Illumos/Solaris. Does nothing when used with other platforms.
         type: str
         version_added: "2.8"
     password_expire_max:
@@ -267,8 +264,7 @@ options:
     umask:
         description:
             - Sets the umask of the user.
-            - Does nothing when used with other platforms.
-            - Currently supported on Linux.
+            - Currently supported on Linux. Does nothing when used with other platforms.
             - Requires O(local) is omitted or V(False).
         type: str
         version_added: "2.12"
@@ -308,6 +304,11 @@ EXAMPLES = r'''
     comment: John Doe
     uid: 1040
     group: admin
+
+- name: Create a user 'johnd' with a home directory
+  ansible.builtin.user:
+    name: johnd
+    create_home: yes
 
 - name: Add the user 'james' with a bash shell, appending the group 'admins' and 'developers' to the user's groups
   ansible.builtin.user:
@@ -634,6 +635,9 @@ class User(object):
                             maybe_invalid = True
                         # sha512
                         if fields[1] == '6' and len(fields[-1]) != 86:
+                            maybe_invalid = True
+                        # yescrypt
+                        if fields[1] == 'y' and len(fields[-1]) != 43:
                             maybe_invalid = True
                     else:
                         maybe_invalid = True
@@ -1065,12 +1069,6 @@ class User(object):
                     if line.startswith(to_bytes(name_test)):
                         exists = True
                         break
-
-            if not exists:
-                self.module.warn(
-                    "'local: true' specified and user '{name}' was not found in {file}. "
-                    "The local user account may already exist if the local account database exists "
-                    "somewhere other than {file}.".format(file=self.PASSWORDFILE, name=self.name))
 
             return exists
 

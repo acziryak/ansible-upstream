@@ -4,8 +4,7 @@
 # Copyright: (c) 2017, Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -111,7 +110,7 @@ notes:
   - As of Ansible 2.3, the O(dest) option has been changed to O(path) as default, but O(dest) still works as well.
   - Option O(ignore:follow) has been removed in Ansible 2.5, because this module modifies the contents of the file
     so O(ignore:follow=no) does not make sense.
-  - When more then one block should be handled in one file you must change the O(marker) per task.
+  - When more than one block should be handled in one file you must change the O(marker) per task.
 extends_documentation_fragment:
     - action_common_attributes
     - action_common_attributes.files
@@ -272,8 +271,10 @@ def main():
         if not os.path.exists(destpath) and not module.check_mode:
             try:
                 os.makedirs(destpath)
+            except OSError as e:
+                module.fail_json(msg='Error creating %s Error code: %s Error description: %s' % (destpath, e.errno, e.strerror))
             except Exception as e:
-                module.fail_json(msg='Error creating %s Error code: %s Error description: %s' % (destpath, e[0], e[1]))
+                module.fail_json(msg='Error creating %s Error: %s' % (destpath, to_native(e)))
         original = None
         lines = []
     else:

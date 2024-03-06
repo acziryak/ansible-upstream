@@ -15,9 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-# Make coding more python3-ish
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+from __future__ import annotations
 
 import os
 
@@ -317,9 +315,6 @@ def test_empty_raw_params():
     parent_task._play = None
 
     task_ds_list = [
-        {
-            'include': ''
-        },
         {
             'include_tasks': ''
         },

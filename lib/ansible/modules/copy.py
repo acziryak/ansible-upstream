@@ -4,8 +4,7 @@
 # Copyright: (c) 2017, Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+from __future__ import annotations
 
 
 DOCUMENTATION = r'''
@@ -14,10 +13,14 @@ module: copy
 version_added: historical
 short_description: Copy files to remote locations
 description:
-    - The M(ansible.builtin.copy) module copies a file from the local or remote machine to a location on the remote machine.
+    - The M(ansible.builtin.copy) module copies a file or a directory structure from the local or remote machine to a location on the remote machine.
+      File system meta-information (permissions, ownership, etc.) may be set, even when the file or directory already exists on the target system.
+      Some meta-information may be copied on request.
+    - Get meta-information with the M(ansible.builtin.stat) module.
+    - Set meta-information with the M(ansible.builtin.file) module.
     - Use the M(ansible.builtin.fetch) module to copy files from remote locations to the local box.
     - If you need variable interpolation in copied files, use the M(ansible.builtin.template) module.
-      Using a variable in the O(content) field will result in unpredictable output.
+      Using a variable with the O(content) parameter produces unpredictable results.
     - For Windows targets, use the M(ansible.windows.win_copy) module instead.
 options:
   src:
@@ -79,9 +82,10 @@ options:
       See CVE-2020-1736 for further details.
   directory_mode:
     description:
-    - When doing a recursive copy set the mode for the directories.
-    - If this is not set we will use the system defaults.
-    - The mode is only set on directories which are newly created, and will not affect those that already existed.
+    - Set the access permissions of newly created directories to the given mode.
+      Permissions on existing directories do not change.
+    - See O(mode) for the syntax of accepted values.
+    - The target system's defaults determine permissions when this parameter is not set.
     type: raw
     version_added: '1.5'
   remote_src:
@@ -91,7 +95,7 @@ options:
     - If V(true) it will search for O(src) on the managed (remote) node.
     - O(remote_src) supports recursive copying as of version 2.8.
     - O(remote_src) only works with O(mode=preserve) as of version 2.6.
-    - Autodecryption of files does not work when O(remote_src=yes).
+    - Auto-decryption of files does not work when O(remote_src=yes).
     type: bool
     default: no
     version_added: '2.0'
@@ -268,7 +272,7 @@ mode:
     description: Permissions of the target, after execution.
     returned: success
     type: str
-    sample: "0644"
+    sample: '0644'
 size:
     description: Size of the target, after execution.
     returned: success
@@ -297,7 +301,6 @@ from ansible.module_utils.common.text.converters import to_bytes, to_native
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.common.process import get_bin_path
 from ansible.module_utils.common.locale import get_best_parsable_locale
-from ansible.module_utils.six import PY3
 
 
 # The AnsibleModule object
@@ -701,7 +704,7 @@ def main():
                             raise
 
                 # might be needed below
-                if PY3 and hasattr(os, 'listxattr'):
+                if hasattr(os, 'listxattr'):
                     try:
                         src_has_acls = 'system.posix_acl_access' in os.listxattr(src)
                     except Exception as e:
@@ -711,7 +714,7 @@ def main():
                 # at this point we should always have tmp file
                 module.atomic_move(b_mysrc, dest, unsafe_writes=module.params['unsafe_writes'])
 
-                if PY3 and hasattr(os, 'listxattr') and platform.system() == 'Linux' and not remote_src:
+                if hasattr(os, 'listxattr') and platform.system() == 'Linux' and not remote_src:
                     # atomic_move used above to copy src into dest might, in some cases,
                     # use shutil.copy2 which in turn uses shutil.copystat.
                     # Since Python 3.3, shutil.copystat copies file extended attributes:

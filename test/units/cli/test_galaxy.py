@@ -16,9 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-# Make coding more python3-ish
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+from __future__ import annotations
 
 import contextlib
 
@@ -39,10 +37,11 @@ from ansible.cli.galaxy import GalaxyCLI
 from ansible.galaxy import collection
 from ansible.galaxy.api import GalaxyAPI
 from ansible.errors import AnsibleError
+from ansible.module_utils.common.file import S_IRWU_RG_RO, S_IRWXU_RXG_RXO
 from ansible.module_utils.common.text.converters import to_bytes, to_native, to_text
 from ansible.utils import context_objects as co
 from ansible.utils.display import Display
-from units.compat import unittest
+import unittest
 from unittest.mock import patch, MagicMock
 
 
@@ -660,9 +659,9 @@ def test_collection_build(collection_artifact):
             assert member.uid == 0
             assert member.uname == ''
             if member.isdir() or member.name == 'runme.sh':
-                assert member.mode == 0o0755
+                assert member.mode == S_IRWXU_RXG_RXO
             else:
-                assert member.mode == 0o0644
+                assert member.mode == S_IRWU_RG_RO
 
         manifest_file = tar.extractfile(tar_members[0])
         try:
@@ -769,6 +768,20 @@ def test_collection_install_with_names(collection_install):
     assert mock_install.call_args[0][4] is False  # no_deps
     assert mock_install.call_args[0][5] is False  # force
     assert mock_install.call_args[0][6] is False  # force_deps
+
+
+def test_collection_install_with_invalid_requirements_format(collection_install):
+    output_dir = collection_install[2]
+
+    requirements_file = os.path.join(output_dir, 'requirements.yml')
+    with open(requirements_file, 'wb') as req_obj:
+        req_obj.write(b'"invalid"')
+
+    galaxy_args = ['ansible-galaxy', 'collection', 'install', '--requirements-file', requirements_file,
+                   '--collections-path', output_dir]
+
+    with pytest.raises(AnsibleError, match="Expecting requirements yaml to be a list or dictionary but got str"):
+        GalaxyCLI(args=galaxy_args).run()
 
 
 def test_collection_install_with_requirements_file(collection_install):

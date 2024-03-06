@@ -1,8 +1,7 @@
 # Copyright (c) 2017 Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+from __future__ import annotations
 
 DOCUMENTATION = '''
     name: constructed
@@ -26,6 +25,8 @@ DOCUMENTATION = '''
                 - The host_group_vars (enabled by default) 'vars plugin' is the one responsible for reading host_vars/ and group_vars/ directories.
                 - This will execute all vars plugins, even those that are not supposed to execute at the 'inventory' stage.
                   See vars plugins docs for details on 'stage'.
+                - Implicit groups, such as 'all' or 'ungrouped', need to be explicitly defined in any previous inventory to apply the
+                  corresponding group_vars
             required: false
             default: false
             type: boolean
